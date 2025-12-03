@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindLift AI - Emotional Wellness Companion</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // Simple SVG Icons
+        const Heart = () => <span className="inline-block">❤️</span>;
+        const Youtube = () => <span className="inline-block">🎬</span>;
+        const BookOpen = () => <span className="inline-block">📖</span>;
+        const Award = () => <span className="inline-block">🏆</span>;
+        const TrendingUp = () => <span className="inline-block">📈</span>;
+        const Sparkles = () => <span className="inline-block text-2xl">✨</span>;
+        const Calendar = () => <span className="inline-block">📅</span>;
+        const Target = () => <span className="inline-block">🎯</span>;
+        const ArrowLeft = () => <span className="inline-block">←</span>;
+
+        const EmotionDetectorAgent = {
+          detectEmotion: (input) => {
+            const emotions = {
+              sad: ['sad', 'down', 'depressed', 'lonely', 'hurt'],
+              anxious: ['anxious', 'worried', 'stressed', 'nervous'],
+              inspired: ['inspired', 'motivated', 'excited'],
+              learning: ['learn', 'study', 'grow', 'skill'],
+              helping: ['help', 'volunteer', 'give'],
+              creative: ['create', 'art', 'hobby'],
+              grateful: ['grateful', 'thankful', 'happy'],
+              lost: ['lost', 'confused', 'stuck']
+            };
+            const lower = input.toLowerCase();
+            for (const [emotion, keywords] of Object.entries(emotions)) {
+              if (keywords.some(k => lower.includes(k))) return emotion;
+            }
+            return 'neutral';
+          }
+        };
+
+        const VideoCuratorAgent = {
+          getVideos: (emotion) => {
+            const videos = {
+              sad: [
+                { id: 'k7X7sZzSXYs', title: 'This Could Change Your Life', speaker: 'Inspiring', pts: 15 },
+                { id: 'WbS9jZOlQjc', title: 'What makes a good life?', speaker: 'Robert Waldinger', pts: 20 },
+                { id: 'Ks-_Mh1QhMc', title: 'Body language power', speaker: 'Amy Cuddy', pts: 25 }
+              ],
+              anxious: [
+                { id: 'o268qbb_0BM', title: '10 mindful minutes', speaker: 'Andy Puddicombe', pts: 15 },
+                { id: 'WWloIAQpMcQ', title: 'Make stress your friend', speaker: 'Kelly McGonigal', pts: 25 }
+              ],
+              inspired: [
+                { id: '8CrOL-ydFMI', title: 'Leaders inspire action', speaker: 'Simon Sinek', pts: 25 },
+                { id: 'fLexgOxsZu0', title: 'Puzzle of motivation', speaker: 'Dan Pink', pts: 25 }
+              ],
+              learning: [
+                { id: '5MgBikgcWnY', title: 'Learn in 20 hours', speaker: 'Josh Kaufman', pts: 25 },
+                { id: 'JC82Il2cjqA', title: 'Grit', speaker: 'Angela Duckworth', pts: 15 }
+              ],
+              helping: [
+                { id: 'psN1DORYYV0', title: 'Find work you love', speaker: 'Scott Dinsmore', pts: 25 }
+              ],
+              creative: [
+                { id: 'iG9CE55wbtY', title: 'Creative genius', speaker: 'Elizabeth Gilbert', pts: 25 }
+              ],
+              neutral: [
+                { id: 'RYlCVwxoL_g', title: 'Power of vulnerability', speaker: 'Brené Brown', pts: 25 }
+              ]
+            };
+            return videos[emotion] || videos.neutral;
+          }
+        };
+
+        const ResourceAgent = {
+          getResources: (emotion) => {
+            const all = {
+              sad: [
+                { title: 'Crisis Text Line', link: 'https://crisistextline.org', type: 'Support', pts: 5 },
+                { title: '7 Cups', link: 'https://7cups.com', type: 'Community', pts: 5 }
+              ],
+              learning: [
+                { title: 'Coursera', link: 'https://coursera.org', type: 'Learning', pts: 5 },
+                { title: 'Khan Academy', link: 'https://khanacademy.org', type: 'Learning', pts: 5 }
+              ],
+              helping: [
+                { title: 'VolunteerMatch', link: 'https://volunteermatch.org', type: 'Volunteer', pts: 10 }
+              ],
+              default: [
+                { title: 'Calm', link: 'https://calm.com', type: 'Practice', pts: 5 }
+              ]
+            };
+            return all[emotion] || all.default;
+          }
+        };
+
+        function MindLiftAI() {
+          const [view, setView] = useState('home');
+          const [input, setInput] = useState('');
+          const [emotion, setEmotion] = useState(null);
+          const [videos, setVideos] = useState([]);
+          const [resources, setResources] = useState([]);
+          const [journal, setJournal] = useState([]);
+          const [journalText, setJournalText] = useState('');
+          const [points, setPoints] = useState(0);
+          const [watched, setWatched] = useState([]);
+          const [confetti, setConfetti] = useState(false);
+
+          useEffect(() => {
+            const saved = localStorage.getItem('mindlift');
+            if (saved) {
+              const data = JSON.parse(saved);
+              setPoints(data.points || 0);
+              setJournal(data.journal || []);
+              setWatched(data.watched || []);
+            }
+          }, []);
+
+          const save = (p, j, w) => {
+            localStorage.setItem('mindlift', JSON.stringify({ points: p, journal: j, watched: w }));
+          };
+
+          const showConfetti = () => {
+            setConfetti(true);
+            setTimeout(() => setConfetti(false), 2000);
+          };
+
+          const checkIn = () => {
+            if (!input.trim()) return;
+            const em = EmotionDetectorAgent.detectEmotion(input);
+            const vids = VideoCuratorAgent.getVideos(em);
+            const res = ResourceAgent.getResources(em);
+            
+            setEmotion(em);
+            setVideos(vids);
+            setResources(res);
+            
+            const newP = points + 10;
+            const newJ = [{ id: Date.now(), text: input, emotion: em, date: new Date().toISOString() }, ...journal];
+            setPoints(newP);
+            setJournal(newJ);
+            save(newP, newJ, watched);
+            showConfetti();
+            setView('results');
+          };
+
+          const watchVideo = (v) => {
+            const newW = [...watched, v.id];
+            const newP = points + v.pts;
+            setWatched(newW);
+            setPoints(newP);
+            save(newP, journal, newW);
+            showConfetti();
+          };
+
+          const saveJournal = () => {
+            if (!journalText.trim()) return;
+            const newJ = [{ id: Date.now(), text: journalText, date: new Date().toISOString() }, ...journal];
+            const newP = points + 15;
+            setJournal(newJ);
+            setPoints(newP);
+            setJournalText('');
+            save(newP, newJ, watched);
+            showConfetti();
+          };
+
+          const emotions = {
+            sad: { color: 'bg-blue-100 text-blue-800', msg: "I sense you're going through tough times." },
+            anxious: { color: 'bg-yellow-100 text-yellow-800', msg: "Let's find calm together." },
+            inspired: { color: 'bg-purple-100 text-purple-800', msg: "Your energy is amazing!" },
+            learning: { color: 'bg-green-100 text-green-800', msg: "Love the growth mindset!" },
+            helping: { color: 'bg-pink-100 text-pink-800', msg: "Your desire to help is beautiful." },
+            creative: { color: 'bg-orange-100 text-orange-800', msg: "Let's unleash creativity!" },
+            neutral: { color: 'bg-gray-100 text-gray-800', msg: "Let's discover something meaningful." }
+          };
+
+          if (view === 'home') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4 sm:p-8">
+                {confetti && <div className="fixed inset-0 pointer-events-none z-50">{[...Array(20)].map((_, i) => <div key={i} className="absolute text-2xl animate-ping" style={{left: `${Math.random()*100}%`, top: `${Math.random()*100}%`}}>✨</div>)}</div>}
+                <div className="max-w-4xl mx-auto">
+                  <div className="text-center mb-6">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <Sparkles />
+                      <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">MindLift AI</h1>
+                    </div>
+                    <p className="text-gray-600">Your AI Companion for Emotional Wellness</p>
+                  </div>
+                  <div className="flex justify-center gap-3 mb-6">
+                    <div className="bg-white rounded-xl shadow px-4 py-2">
+                      <Award /><div className="text-xl font-bold">{points}</div><div className="text-xs">Points</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow px-4 py-2">
+                      <Target /><div className="text-xl font-bold">{Math.floor(points/100)}</div><div className="text-xs">Level</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-center gap-3 mb-6 flex-wrap">
+                    <button onClick={() => setView('home')} className="px-4 py-2 bg-purple-600 text-white rounded-lg font-semibold"><Heart /> Check In</button>
+                    <button onClick={() => setView('journal')} className="px-4 py-2 bg-white rounded-lg font-semibold hover:bg-gray-50"><BookOpen /> Journal</button>
+                    <button onClick={() => setView('stats')} className="px-4 py-2 bg-white rounded-lg font-semibold hover:bg-gray-50"><TrendingUp /> Stats</button>
+                  </div>
+                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    <h2 className="text-xl font-bold mb-3">How are you feeling today?</h2>
+                    <textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Share what's on your mind..." className="w-full p-3 border-2 rounded-lg mb-3 min-h-24 focus:border-purple-400 focus:outline-none" />
+                    <button onClick={checkIn} disabled={!input.trim()} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50">Get Support (+10 pts)</button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white rounded-xl p-4 text-center"><Youtube /><div className="text-xl font-bold mt-1">{watched.length}</div><div className="text-xs">Videos</div></div>
+                    <div className="bg-white rounded-xl p-4 text-center"><BookOpen /><div className="text-xl font-bold mt-1">{journal.length}</div><div className="text-xs">Entries</div></div>
+                    <div className="bg-white rounded-xl p-4 text-center"><Calendar /><div className="text-xl font-bold mt-1">{journal.filter(e => e.emotion).length}</div><div className="text-xs">Check-ins</div></div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (view === 'results') {
+            const em = emotions[emotion] || emotions.neutral;
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4 sm:p-8">
+                <div className="max-w-6xl mx-auto">
+                  <button onClick={() => setView('home')} className="mb-4 text-purple-600 font-semibold"><ArrowLeft /> Back</button>
+                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${em.color}`}>{emotion?.toUpperCase()}</span>
+                    <p className="text-lg mt-3">{em.msg}</p>
+                  </div>
+                  <h3 className="text-xl font-bold mb-4"><Youtube /> Recommended Videos</h3>
+                  <div className="grid gap-4 mb-6">
+                    {videos.map((v, i) => (
+                      <div key={i} className="bg-white rounded-xl shadow-lg overflow-hidden">
+                        <div className="flex flex-col sm:flex-row">
+                          <img src={`https://img.youtube.com/vi/${v.id}/hqdefault.jpg`} className="w-full sm:w-48 h-36 object-cover" alt={v.title} />
+                          <div className="p-4 flex-1">
+                            <h4 className="font-bold mb-1">{v.title}</h4>
+                            <p className="text-sm text-gray-600 mb-3">{v.speaker}</p>
+                            <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer" onClick={() => watchVideo(v)} className="inline-block bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600">Watch (+{v.pts} pts)</a>
+                            {watched.includes(v.id) && <span className="ml-3 text-green-600 text-sm">✓ Watched</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <h3 className="text-xl font-bold mb-4"><BookOpen /> Resources</h3>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {resources.map((r, i) => (
+                      <div key={i} className="bg-white rounded-xl shadow-lg p-4">
+                        <div className="text-xs text-purple-600 font-semibold mb-1">{r.type}</div>
+                        <h4 className="font-bold mb-2">{r.title}</h4>
+                        <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-purple-600 font-semibold text-sm">Explore (+{r.pts} pts) →</a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (view === 'journal') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4 sm:p-8">
+                <div className="max-w-4xl mx-auto">
+                  <button onClick={() => setView('home')} className="mb-4 text-purple-600 font-semibold"><ArrowLeft /> Back</button>
+                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    <h2 className="text-xl font-bold mb-3">Reflection Journal</h2>
+                    <textarea value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder="How are you feeling?" className="w-full p-3 border-2 rounded-lg mb-3 min-h-32 focus:border-purple-400 focus:outline-none" />
+                    <button onClick={saveJournal} disabled={!journalText.trim()} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50">Save Entry (+15 pts)</button>
+                  </div>
+                  <h3 className="text-xl font-bold mb-4">Past Entries</h3>
+                  {journal.length === 0 ? (
+                    <div className="bg-white rounded-xl p-8 text-center text-gray-500">No entries yet!</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {journal.map(e => (
+                        <div key={e.id} className="bg-white rounded-xl shadow p-4">
+                          {e.emotion && <span className={`px-2 py-1 rounded text-xs font-semibold ${emotions[e.emotion]?.color}`}>{e.emotion}</span>}
+                          <p className="mt-2">{e.text}</p>
+                          <div className="text-xs text-gray-400 mt-2">{new Date(e.date).toLocaleDateString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          if (view === 'stats') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 p-4 sm:p-8">
+                <div className="max-w-4xl mx-auto">
+                  <button onClick={() => setView('home')} className="mb-4 text-purple-600 font-semibold"><ArrowLeft /> Back</button>
+                  <h2 className="text-2xl font-bold mb-6">Your Progress</h2>
+                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white rounded-xl shadow-lg p-6"><Award /><div className="text-3xl font-bold mt-2">{points}</div><div>Total Points</div></div>
+                    <div className="bg-white rounded-xl shadow-lg p-6"><Target /><div className="text-3xl font-bold mt-2">Level {Math.floor(points/100)}</div><div>{points%100}/100 to next</div></div>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="font-bold mb-4">Activity</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between"><span>Check-ins</span><span className="font-bold">{journal.filter(e => e.emotion).length}</span></div>
+                      <div className="flex justify-between"><span>Videos</span><span className="font-bold">{watched.length}</span></div>
+                      <div className="flex justify-between"><span>Entries</span><span className="font-bold">{journal.length}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+        }
+
+        ReactDOM.render(<MindLiftAI />, document.getElementById('root'));
+    </script>
+</body>
+</html>
